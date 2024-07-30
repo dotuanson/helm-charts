@@ -1,0 +1,20 @@
+{{- $sm := .Values.serviceMonitor -}}
+{{- if and .Values.enabled $sm.enabled -}}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "rayservice.fullname" . }}
+  labels:
+    {{- include "rayservice.labels" . | nindent 4 }}
+spec:
+  {{- with $sm.endpoints }}
+  endpoints: {{ toYaml . | nindent 4 }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "rayservice.selectorLabels" . | nindent 6 }}
+  {{- with $sm.extraConfig }}
+  {{- toYaml . | nindent 2 }}
+  {{- end }}
+{{ end }}

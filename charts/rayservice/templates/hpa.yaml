@@ -1,0 +1,68 @@
+{{- $hpa := .Values.autoscaling -}}
+{{- if and (and .Values.enabled $hpa.enabled) (mustHas .Values.deployType (list "Deployment" "StatefulSet")) -}}
+---
+apiVersion: {{ include "rayservice.hpa.apiVersion" $ }}
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "rayservice.fullname" $ }}
+  labels:
+    {{- include "rayservice.labels" $ | nindent 4 }}
+spec:
+  scaleTargetRef:
+  {{- if .Values.rollout.enabled }}
+    apiVersion: argoproj.io/v1alpha1
+    kind: Rollout
+  {{- else }}
+    apiVersion: apps/v1
+    kind: {{ .Values.deployType }}
+  {{- end }}
+    name: {{ include "rayservice.fullname" $ }}
+  minReplicas: {{ $hpa.minReplicas }}
+  maxReplicas: {{ $hpa.maxReplicas }}
+  metrics:
+    {{- with $hpa.targetMemoryUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: memory
+        {{- if semverCompare ">=1.18-0" $.Capabilities.KubeVersion.Version }}
+        target:
+          type: Utilization
+          averageUtilization: {{ . }}
+        {{- else }}
+        targetAverageUtilization: {{ . }}
+        {{- end -}}
+    {{- end }}
+    {{- with $hpa.targetCPUUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: cpu
+        {{- if semverCompare ">=1.18-0" $.Capabilities.KubeVersion.Version }}
+        target:
+          type: Utilization
+          averageUtilization: {{ . }}
+        {{- else }}
+        targetAverageUtilization: {{ . }}
+        {{- end -}}
+    {{- end }}
+  {{- if semverCompare ">=1.18-0" $.Capabilities.KubeVersion.Version -}}
+  {{- with $hpa.behavior }}
+  behavior:
+    {{- with .scaleDown }}
+    scaleDown:
+      selectPolicy: {{ .selectPolicy }}
+      stabilizationWindowSeconds: {{ .stabilizationWindowSeconds }}
+      {{- if .policies }}
+      policies: {{ toYaml .policies | nindent 8 }}
+      {{- end -}}
+    {{- end -}}
+    {{- with .scaleUp }}
+    scaleUp:
+      selectPolicy: {{ .selectPolicy }}
+      stabilizationWindowSeconds: {{ .stabilizationWindowSeconds }}
+      {{- if .policies }}
+      policies: {{ toYaml .policies | nindent 8 }}
+      {{- end -}}
+    {{- end -}}
+  {{- end -}}
+  {{- end -}}
+{{ end }}

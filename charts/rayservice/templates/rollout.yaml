@@ -1,0 +1,32 @@
+{{- if and .Values.enabled .Values.rollout.enabled -}}
+{{- $blueGreen := .Values.rollout.strategy.blueGreen -}}
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: {{ include "rayservice.fullname" . }}
+  labels:
+    {{- include "rayservice.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicas }}
+  {{- end }}
+  strategy: 
+    blueGreen:
+    {{- if not $blueGreen.activeService }}
+      activeService: {{ include "rayservice.fullname" . }}
+    {{- end -}}
+    {{- if not $blueGreen.previewService }}
+      previewService: {{ include "rayservice.fullname" . }}-preview
+    {{- end -}}
+    {{- toYaml $blueGreen | nindent 6 }}
+  revisionHistoryLimit: {{ max .Values.revisionHistoryLimit 3 }}
+  progressDeadlineSeconds: {{ .Values.progressDeadlineSeconds }}
+  selector:
+    matchLabels:
+      {{- include "rayservice.selectorLabels" . | nindent 6 }}
+  workloadRef:
+    apiVersion: apps/v1
+    kind: {{ .Values.deployType }}
+    name: {{ include "rayservice.fullname" . }}
+{{ end }}

@@ -1,0 +1,17 @@
+{{- if and .Values.enabled (eq .Values.deployType "DaemonSet") -}}
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: {{ include "rayservice.fullname" . }}
+  labels:
+    {{- include "rayservice.labels" . | nindent 4 }}
+spec:
+  updateStrategy:
+    type: {{ .Values.strategy | quote }}
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
+  selector:
+    matchLabels:
+      {{- include "rayservice.selectorLabels" . | nindent 6 }}
+  template: {{ include "rayservice.template.pod" . | nindent 4 }}
+{{ end }}

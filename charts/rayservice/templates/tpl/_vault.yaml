@@ -1,0 +1,37 @@
+{{/*
+Render vault annotations
+*/}}
+{{- define "rayservice.vault.annotations" }}
+{{- $vault := .Values.vault -}}
+{{- if $vault.enabled -}}
+vault.hashicorp.com/agent-inject: "true"
+vault.hashicorp.com/agent-pre-populate-only: "true"
+{{- with $vault.annotationValues.authPath }}
+vault.hashicorp.com/auth-path: {{ . | quote }}
+{{- end }}
+{{- with $vault.annotationValues.internalCaCert }}
+vault.hashicorp.com/ca-cert: {{ . | quote }}
+{{- end }}
+{{- with $vault.annotationValues.serviceServer }}
+vault.hashicorp.com/service: {{ . | quote }}
+{{- end }}
+{{- with $vault.annotationValues.namespace }}
+vault.hashicorp.com/namespace: {{ . | quote }}
+{{- end }}
+{{- if eq $vault.template.type "annotation" }}
+{{ printf "vault.hashicorp.com/agent-inject-secret-%s" $vault.template.fileName }}: {{ $vault.annotationValues.path | quote }}
+{{ printf "vault.hashicorp.com/agent-inject-template-%s" $vault.template.fileName }}: |
+{{ trim $vault.template.content | indent 2 }}
+vault.hashicorp.com/role: {{ $vault.annotationValues.role | quote }}
+{{- else }}
+vault.hashicorp.com/agent-configmap: {{ include "rayservice.vault.templateName" . | quote }}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Vault template name for configmap type
+*/}}
+{{- define "rayservice.vault.templateName" }}
+{{- printf "%s-%s" .Release.Name .Values.vault.template.name }}
+{{- end -}}

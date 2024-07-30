@@ -1,0 +1,11 @@
+{{- if and .Values.enabled .Values.pvcsbackup.enabled -}}
+{{- with .Values.pvcsbackup.repo }}
+apiVersion: stash.appscode.com/v1alpha1
+kind: Repository
+metadata:
+  name: {{ include "rayservice.fullname" $ }}
+spec:
+  backend:
+    {{- toYaml . | nindent 4 }}
+{{- end -}}
+{{ end }}

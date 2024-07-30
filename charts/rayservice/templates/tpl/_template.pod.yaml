@@ -1,0 +1,138 @@
+{{/*
+Render pod manifest
+*/}}
+{{- define "rayservice.template.pod" -}}
+metadata:
+  name: {{ include "rayservice.name" . }}
+  labels:
+    {{- include "rayservice.labels" . | nindent 4 -}}
+  {{- if or .Values.vault.enabled .Values.podAnnotations }}
+  annotations:
+    {{- if .Values.vault.enabled }}
+    {{- include "rayservice.vault.annotations" $ | nindent 4 -}}
+    {{- end }}
+		{{- with .Values.podAnnotations }}
+    {{- toYaml . | nindent 4 }}
+		{{- end -}}
+  {{- end }}
+spec:
+  {{- with .Values.image.imagePullSecrets }}
+  imagePullSecrets: {{ toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with .Values.hostAliases }}
+  hostAliases: {{ toYaml . | nindent 4 }}
+  {{- end }}
+  serviceAccountName: {{ include "rayservice.serviceAccountName" $ }}
+  securityContext: {{ toYaml .Values.podSecurityContext | nindent 4 }}
+  containers:
+    - name: {{ include "rayservice.name" $ }}
+      securityContext: {{- toYaml .Values.securityContext | nindent 8 }}
+      image: "{{ .Values.image.repository | default .Values.quickConfigs.registry }}:{{ .Values.image.tag | default (include "rayservice.appVersion" $) }}"
+      imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
+      {{- with .Values.command }}
+      command: {{ toJson . }}
+      {{- end }}
+      {{- with .Values.runtimeArgs }}
+      args: {{ toJson . }}
+      {{- end }}
+      {{- with .Values.env }}
+      env: {{ include "rayservice.env" . | indent 8 }}
+      {{- end }}
+      {{- with .Values.envFrom }}
+      envFrom: {{ tpl (toString (toYaml .)) $ | nindent 8 }}
+      {{- end }}
+      {{- with .Values.ports | default (list (dict "containerPort" .Values.quickConfigs.port )) }}
+      ports:
+        {{- range $port := . }}
+        - name: {{ $port.name | default "http" }}
+          containerPort: {{ $port.containerPort }}
+          protocol: {{ $port.protocol | default "TCP" }}
+        {{- end -}}
+      {{- end -}}
+      {{- if .Values.probesOverride -}}
+      {{- toYaml .Values.probesOverride | nindent 6 }}
+      {{- else -}}
+      {{- include "rayservice.probes" . | nindent 6 }}
+      {{- end -}}
+      {{- if .Values.lifecycleOverride }}
+      lifecycle: {{ toYaml .Values.lifecycleOverride | nindent 8 }}
+      {{- else -}}
+      {{- with .Values.lifecycle }}
+        {{- include "rayservice.lifecycleHooks" . | nindent 6 }}
+      {{- end -}}
+      {{- end }}
+      resources: {{ toYaml .Values.resources | nindent 8 }}
+      {{- include "rayservice.template.pod.volumeMounts" . | nindent 6 -}}
+  {{- include "rayservice.template.pod.volumes" . | nindent 2 -}}
+  {{- include "rayservice.template.pod.schedule" . | nindent 2 -}}
+  {{- with .Values.podLifecycle }}
+  {{- toYaml . | nindent 2 }}
+  {{- end }}
+{{- end -}}
+
+{{/*
+Render pod schedule part
+*/}}
+{{- define "rayservice.template.pod.schedule" }}
+{{- with .Values.schedule.nodeSelector }}
+nodeSelector: {{ toYaml . | nindent 2 }}
+{{- end }}
+{{- with .Values.schedule.affinity }}
+affinity: {{ toYaml . | nindent 2 }}
+{{- end }}
+{{- with .Values.schedule.tolerations }}
+tolerations: {{ toYaml . | nindent 2 }}
+{{- end }}
+{{- with .Values.schedule.runtimeClassName }}
+runtimeClassName: {{ . }}
+{{- end }}
+{{- end -}}
+
+{{/*
+Render pod volumeMounts part for PVC
+*/}}
+{{- define "rayservice.template.pod.renderPVCVolumeMounts" }}
+{{- range $pvc := $.Values.pvcs }}
+{{- if $pvc.mountPath -}}
+- name: {{ $pvc.name }}
+  mountPath: {{ $pvc.mountPath }}
+{{- end }}
+{{ end }}
+{{- end -}}
+
+{{/*
+Render pod volumeMounts part
+*/}}
+{{- define "rayservice.template.pod.volumeMounts" }}
+{{- $pvcVolumeMounts := (include "rayservice.template.pod.renderPVCVolumeMounts" .) -}}
+{{- if or .Values.volumeMounts $pvcVolumeMounts -}}
+volumeMounts:
+{{- with $pvcVolumeMounts -}}{{- . | nindent 2 }}{{- end -}}
+{{- with .Values.volumeMounts -}}{{- toYaml . | nindent 2 }}{{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Render pod volumes part for PVC
+*/}}
+{{- define "rayservice.template.pod.renderPVCVolumes" }}
+{{- range $pvc := $.Values.pvcs }}
+{{- if $pvc.mountPath -}}
+- name: {{ $pvc.name }}
+  persistentVolumeClaim:
+    claimName: {{ $pvc.name }}
+{{- end }}
+{{ end }}
+{{- end -}}
+
+{{/*
+Render pod volumes part
+*/}}
+{{- define "rayservice.template.pod.volumes" -}}
+{{- $pvcVolumes := (include "rayservice.template.pod.renderPVCVolumes" .) -}}
+{{- if or .Values.volumes $pvcVolumes -}}
+volumes:
+{{- with $pvcVolumes -}}{{- . | nindent 2 }}{{- end -}}
+{{- with .Values.volumes -}}{{- toYaml . | nindent 2 }}{{- end -}}
+{{- end -}}
+{{- end -}}

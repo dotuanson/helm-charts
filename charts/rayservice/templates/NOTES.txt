@@ -1,0 +1,21 @@
+Thank you for using our chart!
+
+ ____        ___                
+/\  _`\     /\_ \               
+\ \ \L\ \___\//\ \    __  __    
+ \ \ ,__/ __`\\ \ \  /\ \/\ \   
+  \ \ \/\ \L\ \\_\ \_\ \ \_\ \  
+   \ \_\ \____//\____\\/`____ \ 
+    \/_/\/___/ \/____/ `/___/> \
+                          /\___/
+                          \/__/ 
+
+Poly will help you deploy multi-app.
+
+Contact us:
+{{- range $maintainer := .Chart.Maintainers }}
+- Name: {{ $maintainer.Name }}
+  Email: {{ $maintainer.Email }}
+{{- end }}
+
+✵✵ Just be happy! ✵✵

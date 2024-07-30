@@ -1,0 +1,25 @@
+{{- if .Values.enabled -}}
+{{- range $cm := .Values.configMaps }}
+{{- if $cm.create }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  {{- $name := printf "%s-%s" $.Release.Name $cm.name }}
+  name: {{ $cm.fullName | default $name }}
+  labels:
+    {{- include "rayservice.labels" $ | nindent 4 }}
+{{- with $cm.data }}
+data:
+  {{- if $cm.isFileType -}}
+  {{ range $key, $val := $cm.data }}
+  {{ $key }}: | 
+{{ $val | indent 4 }}
+  {{ end }}
+  {{- else -}}
+  {{ toYaml $cm.data | nindent 2 }}
+  {{- end -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}

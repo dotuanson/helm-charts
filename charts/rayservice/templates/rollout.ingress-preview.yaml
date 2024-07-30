@@ -1,0 +1,9 @@
+
+{{- $ingress := .Values.rollout.ingressPreview -}}
+{{- if and (and .Values.enabled .Values.rollout.enabled) $ingress.enabled -}}
+{{- $_ := set $ingress "name" (printf "%s-preview" ($ingress.name | default "")) -}}
+{{- $paths := list (dict "path" "/" "serviceName" (printf "%s-preview" (include "rayservice.fullname" .))) -}}
+{{- $_ := set (mustFirst $ingress.hosts) "paths" $paths -}}
+---
+{{ include "rayservice.ingress" (dict "rootCtx" $ "ingress" $ingress) }}
+{{ end }}

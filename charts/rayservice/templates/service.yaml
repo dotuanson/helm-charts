@@ -1,0 +1,32 @@
+{{- if and .Values.enabled .Values.service.enabled -}}
+{{- $defaultPorts := list (dict "port" ( .Values.quickConfigs.port | default 80)) -}}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "rayservice.fullname" . }}
+  labels:
+    {{- include "rayservice.labels" . | nindent 4 }}
+spec:
+  {{- with .Values.service }}
+  {{- if eq .type "none" }}
+  clusterIP: None
+  {{- else }}
+  type: {{ .type }}
+  {{- end }}
+  ports:
+    {{- range $port := ($.Values.service.ports | default $defaultPorts) }}
+    - port: {{ .port }}
+      targetPort: {{ .targetPort | default "http" }}
+      protocol: {{ .protocol | default "TCP" }}
+      {{- if .name }}
+      name: {{ .name }}
+      {{- end -}}
+      {{- if .nodePort }}
+      nodePort: {{ .nodePort }}
+      {{- end -}}
+    {{ end -}}
+  {{- end }}
+  selector:
+    {{- include "rayservice.selectorLabels" . | nindent 4 }}
+{{ end }}

@@ -1,0 +1,10 @@
+
+{{- if and .Values.enabled (or .Values.ingress.enabled .Values.quickConfigs.domain ) -}}
+{{- $ctx := dict "rootCtx" $ "ingress" .Values.ingress -}}
+---
+{{ include "rayservice.ingress" $ctx }}
+{{- range $ingress := .Values.ingress.extraIngress }}
+---
+{{ include "rayservice.ingress" (dict "rootCtx" $ "ingress" $ingress) }}
+{{ end -}}
+{{- end -}}

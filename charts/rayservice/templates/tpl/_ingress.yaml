@@ -1,0 +1,63 @@
+{{/*
+Render Ingress manifest
+*/}}
+{{- define "rayservice.ingress" }}
+{{- $root := get . "rootCtx" -}}
+{{- $ingress := get . "ingress" -}}
+{{- $paths := list (dict "path" "/") -}}
+apiVersion: {{ include "rayservice.ingress.apiVersion" $root }}
+kind: Ingress
+metadata:
+  name: {{ $ingress.name | default $root.Values.quickConfigs.domain | default (include "rayservice.fullname" $root) }}
+  labels:
+    {{- include "rayservice.labels" $root | nindent 4 }}
+  {{- with $ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if and $ingress.className (semverCompare ">=1.18-0" $root.Capabilities.KubeVersion.Version) }}
+  ingressClassName: {{ $ingress.className }}
+  {{- end }}
+  {{- if $ingress.tls }}
+  tls:
+  {{- range $ingress.tls }}
+  - hosts:
+    {{- range .hosts }}
+      - {{ . }}
+    {{- end }}
+    secretName: {{ .secretName }}
+  {{- end }}
+  {{- end }}
+  rules: 
+  {{- range $host := $ingress.hosts }}
+  - host: {{ $host.host | default $root.Values.quickConfigs.domain }}
+    http:
+      paths: {{ include "rayservice.ingress.paths" (dict "rootCtx" $root "paths" ($host.paths | default $paths)) | nindent 6 -}}
+  {{- end -}}
+{{- end -}}
+
+{{/*
+Render Ingress paths
+*/}}
+{{- define "rayservice.ingress.paths" }}
+{{- $root := get . "rootCtx" -}}
+{{- range $path := get . "paths" }}
+{{- $svcName := $path.serviceName | default  | default (include "rayservice.fullname" $root) -}}
+{{- $svcPort := $path.servicePort | default (first $root.Values.service.ports).port | default $root.Values.quickConfigs.port | default 80 -}}
+- path: {{ $path.path }}
+  {{- if semverCompare ">=1.18-0" $root.Capabilities.KubeVersion.Version }}
+  pathType: {{ $path.pathType | default "Prefix" }}
+  {{- end }}
+  backend:
+    {{- if semverCompare ">=1.19-0" $root.Capabilities.KubeVersion.Version }}
+    service:
+      name: {{ $svcName }}
+      port:
+        number: {{ $svcPort }}
+    {{- else }}
+    serviceName: {{ $svcName }}
+    servicePort: {{ $svcPort }}
+    {{- end }}
+{{ end }}
+{{- end -}}

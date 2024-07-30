@@ -1,0 +1,23 @@
+{{- if .Values.enabled -}}
+{{- range $pvc := .Values.pvcs }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ $pvc.name }}
+  labels:
+    {{- include "rayservice.labels" $ | nindent 4 }}
+  {{- with $pvc.annotations }}
+  annotations: 
+    {{- toYaml $pvc.annotations | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if hasKey $pvc "storageClassName" }}
+  storageClassName: {{ $pvc.storageClassName | quote }}
+  {{- end }}
+  accessModes: {{ toYaml ($pvc.accessModes | default (list "ReadWriteOnce")) | nindent 4 }}
+  resources:
+    requests:
+      storage: {{ $pvc.size | default "1Gi" }}
+{{- end -}}
+{{ end }}

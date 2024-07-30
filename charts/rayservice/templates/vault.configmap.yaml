@@ -1,0 +1,14 @@
+
+{{- $vault := .Values.vault -}}
+{{- if and .Values.enabled (and $vault.enabled (eq $vault.template.type "configmap")) -}}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "rayservice.vault.templateName" . }}
+  labels:
+    {{- include "rayservice.labels" . | nindent 4 }}
+data:
+  {{ $vault.template.fileName }}: |
+{{ $vault.template.content | indent 4 }}
+{{ end }}

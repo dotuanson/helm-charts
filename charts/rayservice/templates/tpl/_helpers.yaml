@@ -1,0 +1,145 @@
+{{/*
+Expand the name of the chart.
+*/}}
+{{- define "rayservice.name" -}}
+{{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
+{{- end }}
+
+{{/*
+Create a default fully qualified app name.
+We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
+If release name contains chart name it will be used as a full name.
+*/}}
+{{- define "rayservice.fullname" -}}
+{{- if .Values.fullnameOverride }}
+{{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
+{{- else }}
+{{- $name := default .Chart.Name .Values.nameOverride }}
+{{- if contains $name .Release.Name }}
+{{- .Release.Name | trunc 63 | trimSuffix "-" }}
+{{- else }}
+{{- printf "%s-%s" .Release.Name $name | trunc 63 | trimSuffix "-" }}
+{{- end }}
+{{- end }}
+{{- end }}
+
+{{/*
+Create chart name and version as used by the chart label.
+*/}}
+{{- define "rayservice.chart" -}}
+{{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
+{{- end }}
+
+{{/*
+Common labels
+*/}}
+{{- define "rayservice.labels" -}}
+helm.sh/chart: {{ include "rayservice.chart" . }}
+{{- if .Chart.AppVersion }}
+app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+{{- end }}
+app.kubernetes.io/managed-by: {{ .Release.Service }}
+{{- with .Values.extraLabels }}
+{{ toYaml . }}
+{{- end }}
+{{ include "rayservice.selectorLabels" . }}
+{{- end }}
+
+{{/*
+Selector labels
+*/}}
+{{- define "rayservice.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "rayservice.name" . }}
+app.kubernetes.io/instance: {{ .Release.Name }}
+{{- with .Values.extraSelectorLabels }}
+{{ toYaml . -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+Create the name of the service account to use
+*/}}
+{{- define "rayservice.serviceAccountName" -}}
+{{- if .Values.serviceAccount.create }}
+{{- default (include "rayservice.fullname" .) .Values.serviceAccount.name }}
+{{- else }}
+{{- .Values.serviceAccount.existingServiceAccount | default .Values.serviceAccount.name | default "default" }}
+{{- end }}
+{{- end }}
+
+{{/*
+Chart AppVersion
+*/}}
+{{- define "rayservice.appVersion" }}
+{{ .Values.appVersion | default .Chart.AppVersion }}
+{{- end -}}
+
+{{/*
+Parse to key-value list in YAML format
+*/}}
+{{- define "rayservice.env" }}
+{{- range $key, $value := . }}
+- name: {{ $key | upper | quote }}
+  value: {{ $value | quote }}
+{{- end }}
+{{- end }}
+
+{{/*
+Render probes in pod template for healthcheck
+*/}}
+{{- define "rayservice.probes" -}}
+{{- $probes := .Values.probes -}}
+{{- if not (mustHas "all" $probes.disableProbes) -}}
+{{- if not (mustHas "livenessProbe" $probes.disableProbes) -}}
+{{- $_ := set $probes.livenessProbe.httpGet "path" (default .Values.quickConfigs.healthcheckPath | default $probes.livenessProbe.httpGet.path | default "/") -}}
+livenessProbe: {{ toYaml $probes.livenessProbe | nindent 2 }}
+{{- end }}
+{{- if not (mustHas "readinessProbe" $probes.disableProbes) }}
+{{- $_ := set $probes.readinessProbe.httpGet "path" (default .Values.quickConfigs.healthcheckPath | default $probes.readinessProbe.httpGet.path | default "/") }}
+readinessProbe: {{ toYaml $probes.readinessProbe | nindent 2 }}
+{{- end }}
+{{- if not (mustHas "startupProbe" $probes.disableProbes) }}
+{{- $_ := set $probes.startupProbe.httpGet "path" (default .Values.quickConfigs.healthcheckPath | default $probes.startupProbe.httpGet.path | default "/") }}
+startupProbe: {{ toYaml $probes.startupProbe | nindent 2 }}
+{{- end }}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Render container lifecycle hooks in pod template
+*/}}
+{{- define "rayservice.lifecycleHooks" }}
+{{- if not (or (mustHas "all" .disableHandlers) (and (mustHas "postStart" .disableHandlers) (mustHas "preStop" .disableHandlers))) -}}
+lifecycle:
+{{- if not (mustHas "postStart" .disableHandlers ) }}
+  postStart: {{ toYaml .postStart | nindent 4 }}
+{{- end }}
+{{- if not (mustHas "preStop" .disableHandlers ) }}
+  preStop: {{ toYaml .preStop | nindent 4 }}
+{{- end }}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Render apiVersion for HPA
+*/}}
+{{- define "rayservice.hpa.apiVersion" }}
+{{- if semverCompare ">=1.18-0" $.Capabilities.KubeVersion.Version -}}
+{{- print "autoscaling/v2beta2" -}}
+{{- else -}}
+{{- print "autoscaling/v2beta1" -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Render apiVersion for Ingress
+*/}}
+{{- define "rayservice.ingress.apiVersion" }}
+{{- if semverCompare ">=1.19-0" $.Capabilities.KubeVersion.Version -}}
+{{- print "networking.k8s.io/v1" -}}
+{{- else if semverCompare ">=1.14-0" $.Capabilities.KubeVersion.Version -}}
+{{- print "networking.k8s.io/v1beta1" -}}
+{{- else -}}
+{{- print "extensions/v1beta1" -}}
+{{- end -}}
+{{- end -}}

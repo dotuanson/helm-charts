@@ -1,0 +1,18 @@
+{{- if and .Values.enabled (eq .Values.deployType "CronJob") -}}
+---
+{{- if semverCompare ">=1.21-0" $.Capabilities.KubeVersion.Version }}
+apiVersion: batch/v1
+{{- else }}
+apiVersion: batch/v1beta1
+{{- end }}
+kind: CronJob
+metadata:
+  name: {{ include "rayservice.fullname" . }}
+  labels:
+    {{- include "rayservice.labels" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.cronjob.schedule | quote}}
+  jobTemplate:
+    spec:
+      template: {{ include "rayservice.template.pod" . | nindent 8 }}
+{{ end }}

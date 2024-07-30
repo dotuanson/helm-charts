@@ -1,0 +1,462 @@
+# Allow app to be deployed
+enabled: false
+nameOverride: ""
+fullnameOverride: ""
+
+# Chart manifest override
+appVersion: "1.16.0"
+
+# [Required] Values: Deployment | StatefulSet | DaemonSet | CronJob | None
+# If `StatefulSet`, do not set `service.enabled=false`
+deployType: Deployment
+
+# Provide extra labels for your app
+# this will add to labels section of all resources
+extraLabels: {}
+extraSelectorLabels: {}
+
+# Number of replicas, will be used when HPA is disabled
+replicas: 1
+
+# Choose update strategy for your app
+# Values: RollingUpdate | Recreate | OnDelete
+strategy: RollingUpdate
+
+# More info: https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#progress-deadline-seconds
+# API: https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/deployment-v1/#DeploymentSpec
+progressDeadlineSeconds: 600
+
+# The number of old ReplicaSets to retain to allow rollback
+# More info: https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/deployment-v1/#DeploymentSpec
+revisionHistoryLimit: 0
+
+# For `deployType: CronJob`
+cronjob:
+  schedule: "*/10 * * * *"
+
+rollout:
+  enabled: false
+  # More info: https://argoproj.github.io/argo-rollouts/features/specification/
+  strategy:
+    blueGreen:
+      autoPromotionEnabled: false
+      previewReplicaCount: 1
+      scaleDownDelaySeconds: 60
+      abortScaleDownDelaySeconds: 30
+      # scaleDownDelayRevisionLimit: 1
+      # autoPromotionSeconds: 15
+      # antiAffinity: {}
+      # prePromotionAnalysis: {}
+      # postPromotionAnalysis: {}
+
+  # Like app service config, if not set, app service config will be used
+  servicePreview: {}
+  ingressPreview:
+    enabled: false
+    name: "rollout-ingress"
+    className: "nginx"
+    annotationsOverride: {}
+    annotations:
+      # kubernetes.io/ingress.class: nginx
+      nginx.ingress.kubernetes.io/configuration-snippet: |
+        rewrite "(?i)/preview(/|$)(.*)" /$2 break;
+    hosts:
+      - host: chart-example.local
+        paths:
+          - path: /preview/
+            pathType: Prefix
+    tls: []
+
+# Provide image config for your app
+# More info: https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#image
+image:
+  repository: ""
+  tag: "latest"
+
+  # Values: IfNotPresent | Always | Never
+  pullPolicy: IfNotPresent
+
+  # Provide your image pull secrets, format in example below
+  imagePullSecrets:
+    - name: regcred
+  
+# Pod config
+# Provide pod annotations
+podAnnotations: {}
+  # prometheus.io/scrape: 'true'
+  # prometheus.io/port: '80'
+
+# Provide your app `hostAliases`, format in example below
+# More info: https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#hostname-and-name-resolution
+hostAliases: []
+  # - ip: "192.168.8.103"
+  #   hostnames:
+  #     - "mysql"
+  #     - "redis"
+  #     - "rabbitmq"
+
+# More info: https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#security-context
+podSecurityContext: {}
+  # runAsUser: 1000
+  # runAsGroup: 3000
+  # fsGroup: 2000
+
+# More info: https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#volumes
+volumes: []
+  # - name: nginx-pv
+  #   persistentVolumeClaim:
+  #     claimName: nginx-pv
+
+# Pod scheduling config
+# More info: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node
+# API: https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#scheduling
+schedule:
+  nodeSelector: {}
+    # disktype: ssd
+  affinity: {}
+    # nodeAffinity:
+    #   requiredDuringSchedulingIgnoredDuringExecution:
+    #     nodeSelectorTerms:
+    #     - matchExpressions:
+    #       - key: topology.kubernetes.io/zone
+    #         operator: In
+    #         values:
+    #         - antarctica-east1
+    #         - antarctica-west1
+
+  # More info: https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/
+  tolerations: []
+  # - key: "key1"
+  #   operator: "Equal"
+  #   value: "value1"
+  #   effect: "NoSchedule"
+
+# Provide Pod lifecycle config
+# More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle
+# API: https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#lifecycle
+podLifecycle: {}
+  # restartPolicy: "Always"
+  # terminationGracePeriodSeconds: 30
+
+# Container config
+# More info: https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#security-context-1
+securityContext: {}
+  # runAsUser: 1000
+  # runAsGroup: 3000
+  # fsGroup: 2000
+
+# Provide port to expose for your app
+# More info: 
+ports: []
+  # - name: http # must be unique, optional
+  #   containerPort: 80 # required
+  #   protocol: TCP # default is TCP
+
+# More info: https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#entrypoint-1
+command: ["/bin/sh", "-c"]
+
+# More info: https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#entrypoint-1
+runtimeArgs: [". /vault/secrets/config.env && yarn start"]
+
+# Provide env variable for your app, format in example below
+env: {}
+  # KEY: "value"
+
+envFrom: []
+  # - configMapRef:
+  #     name: "{{ .Release.Name }}-main"
+  #     optional: true
+  # - secretRef:
+  #     name: "{{ .Release.Name }}-env"
+  #     optional: false
+
+# More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#container-probes
+# API: https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#lifecycle-1
+probes:
+  # Probe list that you want to disable, accepted values: "livenessProbe", "readinessProbe", "startupProbe", "all"
+  # Ex: ["livenessProbe", "readinessProbe"] -> enable `startupProbe` only
+  disableProbes: []
+  livenessProbe:
+    httpGet:
+      path: /
+      port: http
+    initialDelaySeconds: 15
+    periodSeconds: 15
+    timeoutSeconds: 10
+    failureThreshold: 30
+    successThreshold: 1
+  readinessProbe:
+    httpGet:
+      path: /
+      port: http
+    initialDelaySeconds: 15
+    periodSeconds: 15
+    timeoutSeconds: 10
+    failureThreshold: 30
+    successThreshold: 1
+  startupProbe:
+    httpGet:
+      path: /
+      port: http
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 30
+
+probesOverride: {}
+  # livenessProbe:
+  #   ...
+  # readinessProbe:
+  #   ...
+  # startupProbe:
+  #   ...
+
+# More info: https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/
+# API: https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#lifecycle-1
+lifecycle:
+  # Handler list that you want to disable, accepted values: "preStop", "postStart", "all"
+  # Ex: ["postStart", "preStop"] -> disable all handlers
+  disableHandlers: ["postStart"]
+  postStart:
+    exec:
+      command: []
+  preStop:
+    exec:
+      command: ["/bin/sh", "-c", "sleep 30"]
+
+lifecycleOverride: {}
+
+# Provide resources, format in example below, must have
+# More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+# API: https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#resources
+resources: {}
+  # limits:
+  #   cpu: 256m
+  #   memory: 512Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 256Mi
+
+# Provide volumeMounts, format in example below
+# More info: https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#volumes-1
+volumeMounts: []
+  # - name: nginx-pv
+  #   mountPath: /usr/share/nginx/html
+
+# Service account config
+# More info: https://kubernetes.io/docs/reference/kubernetes-api/authentication-resources/service-account-v1/#ServiceAccount
+serviceAccount:
+  # Provide existing sa name
+  existingServiceAccount: ""
+  
+  # If not, create new one
+  create: false
+  name: ""
+  annotations: {}
+
+  # More info: https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#use-the-default-service-account-to-access-the-api-server
+  automountServiceAccountToken: true
+
+# Service config
+# More info: https://kubernetes.io/docs/concepts/services-networking/service/
+# API: https://kubernetes.io/docs/reference/kubernetes-api/service-resources/service-v1/
+service:
+  enabled: true
+
+  # More info: https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types
+  # Values: ClusterIP | NodePort | LoadBalancer | ExternalName | none
+  # If `none`, this will be headless service with `clusterIP: None`
+  type: ClusterIP
+
+  # API: https://kubernetes.io/docs/reference/kubernetes-api/service-resources/service-v1/#ServiceSpec
+  # Caution: first port number will be used in ingress
+  ports: []
+    # - name: http # Provide service port name, unique, optional if only one service port is defined on this service 
+    #   port: 80 # Port will be exposed by sevice
+    #   targetPort: http # Port which is exposed by pod, can be the name of port (if any) or port number, default `port value`
+    #   protocol: TCP # Values: "TCP", "UDP", and "SCTP"
+    #   nodePort: 30000 # Port will be exposed by node, only available when `service.type = NodePort`
+  extraServices: []
+
+# Ingress config
+# More info: https://kubernetes.io/docs/concepts/services-networking/ingress/
+ingress:
+  enabled: false
+  name: ""
+
+  # Provide ingress class name, only available for k8s version >= 1.18-0
+  # Can use annotation instead
+  className: "nginx"
+
+  annotations: {}
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+    # nginx.ingress.kubernetes.io/proxy-body-size: 1000m
+
+  # Ingress hosts config
+  hosts:
+    - host: "" # host: "chart-example.local"
+      paths:
+        - path: /
+          # More info: https://kubernetes.io/docs/concepts/services-networking/ingress/#path-types
+          # Values: ImplementationSpecific | Exact | Prefix
+          pathType: Prefix
+          serviceName: ""
+          servicePort: ""
+
+  # Provide ingress tls, format in example below, optional
+  tls: []
+    # - secretName: chart-example-tls
+    #   hosts:
+    #     - chart-example.local
+  
+  extraIngress: []
+
+# Persistent Volume Claim (PVC) config
+# More info: https://kubernetes.io/docs/reference/kubernetes-api/config-and-storage-resources/persistent-volume-claim-v1/
+pvcs: []
+  # - name: ""
+  #   size: 1Gi
+  #   mountPath: ""
+  #   annotations: {}
+  #     # helm.sh/resource-policy: "keep"
+
+  #   # # More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes/#access-modes-1
+  #   accessModes:
+  #     - ReadWriteOnce
+  #     # - ReadOnlyMany
+
+  #   # More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes/#class-1
+  #   # storageClassName: ""
+pvcsbackup:
+  enabled: false
+  repo:
+    s3:
+      endpoint: minio-backup.dev.ftech.ai
+      bucket: stash
+      region: eu-west-1
+      prefix: /backup/test
+    storageSecretName: s3-secret
+  backup:
+    schedule: "*/20 * * * *"
+    retentionPolicy:
+      name: "keep-last-5"
+      keepLast: 5
+      prune: true
+# Horizontal Pod Autoscaler (HPA) config
+# More info: https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/horizontal-pod-autoscaler-v2beta2/
+autoscaling:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 10
+
+  # Target CPU & memory utilization, it will use for triggering sale up
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+
+  # Behavior of scaling, available in `apiVerison` >= autoscaling/v2beta2
+  # More info: https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/horizontal-pod-autoscaler-v2beta2/#HorizontalPodAutoscalerSpec
+  behavior:
+    scaleDown:
+
+      # Scale down delay time (in seconds) for stability
+      # More info: https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#stabilization-window
+      stabilizationWindowSeconds: 300
+
+      # More info: https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#scaling-policies
+      policies: []
+      # - type: Percent
+      #   value: 100
+      #   periodSeconds: 15
+
+      # Provide scale down policy direction
+      # Values: Max | Min | Disable
+      selectPolicy: Max
+    
+    # Define scaleUp, config like scaleDown
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies: []
+      selectPolicy: Max
+
+# ConfigMap config
+configMaps:
+- name: main
+  create: false
+
+  # Provide configmap fullname, the fixed name with highest priority, must be unique, optional
+  fullName: ""
+
+  # Is this configmap type file-config? If true, use second `data` format below
+  isFileType: false
+
+  # Provide data for normal configmap, optional
+  #
+  # data:
+  #   KEY: "value"
+
+  # Provide data for file-config configmap, optional
+  # data:
+  #   hello.txt: |
+  #     hello-world-1
+  #     hello-world-2
+  #     ...
+
+# Enable vault for your app
+#
+vault:
+  enabled: false
+
+  # These value are only required when `template.type = annotation`
+  annotationValues:
+    path: "secret/data/abc" # vault secret path
+    authPath: "auth/kubernetes" # vault authPath
+    role: "abc-ro"
+    namespace: ""
+
+    # Provide vault internalCaCert to verify Vault's TLS
+    internalCaCert: ""
+    # More info: https://www.vaultproject.io/docs/platform/k8s/injector/annotations#vault-hashicorp-com-service
+    serviceServer: "https://vault-raft.prod.ftech.ai"
+
+  template:
+    # Choose vault config type, required, case sensitive
+    # Values: annotation | configmap
+    type: annotation
+
+    # Provide vault template name, will be configmap name as {{ .Release.Name }}-{{ .name }}
+    # required only in configmap type
+    name: "secrets"
+
+    # Provide vault template fileName, required
+    # If type = configmap, it will be used as key
+    #   {{ .fileName }}: 
+    # {{ .content | indent 4 }}
+    #
+    # If type = annotation, it will be added in annotation
+    #   vault.hashicorp.com/agent-inject-secret-{{ .fileName }}:
+    #   vault.hashicorp.com/agent-inject-template-{{ .fileName }}:
+    # 
+    fileName: "secrets"
+
+    # Provide vault template content, required
+    content: |
+      ""
+    
+serviceMonitor:
+  enabled: false
+
+  # Extra endpoint config: https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api.md#endpoint
+  endpoints:
+    - port: http # Name of the service port this endpoint refers to
+      path: /metrics # HTTP path to scrape for metrics
+      interval: 30s
+
+  # More info: https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api.md#servicemonitorspec
+  extraConfig: {}
+
+quickConfigs:
+  repo: "" # comming soon
+  registry: ""
+  domain: ""
+  healthcheckPath: ""
+  port: 80

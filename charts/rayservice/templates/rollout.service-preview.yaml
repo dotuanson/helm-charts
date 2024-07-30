@@ -1,0 +1,29 @@
+{{- if and .Values.enabled .Values.rollout.enabled -}}
+{{- $defaultPorts := list (dict "port" 80) -}}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "rayservice.fullname" . }}-preview
+  labels:
+    {{- include "rayservice.labels" . | nindent 4 }}
+spec:
+  {{- with .Values.rollout.servicePreview | default .Values.service }}
+  {{- if eq .type "none" }}
+  clusterIP: None
+  {{- else }}
+  type: {{ .type | default "ClusterIP" }}
+  {{- end }}
+  ports:
+    {{- range $port := (.ports | default $defaultPorts) }}
+    - port: {{ .port | default 80 }}
+      targetPort: {{ .targetPort | default "http" }}
+      protocol: {{ .protocol | default "TCP" }}
+      {{- if .name }}
+      name: {{ .name }}
+      {{- end -}}
+    {{ end -}}
+  {{- end }}
+  selector:
+    {{- include "rayservice.selectorLabels" . | nindent 4 }}
+{{ end }}
