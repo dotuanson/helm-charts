@@ -1,0 +1,12 @@
+{{- if and .Values.enabled (eq .Values.deployType "RayService") -}}
+---
+apiVersion: ray.io/v1
+kind: RayService
+metadata:
+  name: {{ include "rayservice.fullname" . }}
+spec:
+  serveConfigV2: |
+    {{ toYaml .Values.rayservice.serveConfigV2 | nindent 4 }}
+  rayClusterConfig: 
+    {{ toYaml.Values.rayservice.rayClusterConfig | nindent 4 }}
+{{ end }}

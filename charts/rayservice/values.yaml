@@ -6,7 +6,7 @@ fullnameOverride: ""
 # Chart manifest override
 appVersion: "1.16.0"
 
-# [Required] Values: Deployment | StatefulSet | DaemonSet | CronJob | None
+# [Required] Values: Deployment | StatefulSet | DaemonSet | CronJob | RayService | None
 # If `StatefulSet`, do not set `service.enabled=false`
 deployType: Deployment
 
