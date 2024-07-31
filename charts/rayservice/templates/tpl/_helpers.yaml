@@ -143,3 +143,12 @@ Render apiVersion for Ingress
 {{- print "extensions/v1beta1" -}}
 {{- end -}}
 {{- end -}}
+
+{{- define "rayservice.serveConfigV2" -}}
+|
+{{ toYaml .Values.serveConfigV2 | indent 4 }}
+{{- end }}
+
+{{- define "rayservice.rayClusterConfig" -}}
+{{ toYaml .Values.rayClusterConfig | nindent 4}}
+{{- end }}

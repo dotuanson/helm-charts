@@ -3,12 +3,12 @@ entries:
   rayservice:
   - apiVersion: v2
     appVersion: 1.16.0
-    created: "2024-07-31T08:56:20.31225+07:00"
+    created: "2024-07-31T11:37:04.781565+07:00"
     description: A Helm chart for Kubernetes
-    digest: c14c65e03985fb495f0b0d6b82a8ec8b4a7320be83ab0c52e831bca1df4d6065
+    digest: 8b07e52f6e952fdce639bc09c2560003d08b8af35076f60c6437d7fd3810997d
     name: rayservice
     type: application
     urls:
     - https://dotuanson.github.io/helm-charts/rayservice-0.0.1.tgz
     version: 0.0.1
-generated: "2024-07-31T08:56:20.311268+07:00"
+generated: "2024-07-31T11:37:04.780627+07:00"
